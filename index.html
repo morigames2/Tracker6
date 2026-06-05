@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workout Tracker Master</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#8b5cf6">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--bg:#f4f4f4;--card:#fff;--text:#222;--muted:#666;--accent:#8b5cf6;--accent2:#a78bfa;--danger:#c0392b;--border:#ddd;--soft:#ede9fe;--ok:#22c55e}
+body.dark{--bg:#09080d;--card:#16121f;--text:#f7f2ff;--muted:#b9a8d9;--border:#312842;--soft:#2d194f;--ok:#4ade80}
+body.theme-purple{--accent:#8b5cf6;--accent2:#a78bfa;--soft:#ede9fe} body.dark.theme-purple{--soft:#2d194f}
+body.theme-blue{--accent:#3b82f6;--accent2:#93c5fd;--soft:#dbeafe} body.dark.theme-blue{--soft:#172554}
+body.theme-green{--accent:#22c55e;--accent2:#86efac;--soft:#dcfce7} body.dark.theme-green{--soft:#052e16}
+body.theme-red{--accent:#ef4444;--accent2:#fca5a5;--soft:#fee2e2} body.dark.theme-red{--soft:#450a0a}
+body.theme-gold{--accent:#f59e0b;--accent2:#fcd34d;--soft:#fef3c7} body.dark.theme-gold{--soft:#451a03}
+body.theme-cyber{--accent:#06b6d4;--accent2:#67e8f9;--soft:#cffafe} body.dark.theme-cyber{--soft:#083344}
+*{box-sizing:border-box}
+body{font-family:Arial,sans-serif;max-width:1150px;margin:30px auto;padding:20px;background:var(--bg);color:var(--text)}
+h1,h2,h3{text-align:center}.card,form,table{background:var(--card);padding:20px;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.12);margin-bottom:25px}
+label{display:block;margin-top:12px;font-weight:bold}
+input,select,button,textarea{width:100%;padding:10px;margin-top:6px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text)}
+button{background:#17111f;color:#fff;border:none;cursor:pointer;font-weight:bold;margin-top:15px}
+button:hover{opacity:.86}.small{color:var(--muted);font-size:14px}.danger{background:var(--danger)!important}
+.grid,.summary-grid,.top-actions,.timer-controls,.backup-actions,.readiness-options,.theme-grid,.plan-grid{display:grid;gap:10px}
+.summary-grid{grid-template-columns:repeat(auto-fit,minmax(155px,1fr))}.top-actions,.timer-controls,.backup-actions,.readiness-options,.theme-grid,.plan-grid{grid-template-columns:repeat(auto-fit,minmax(145px,1fr))}
+.stat,.box,.exercise-card,.weight-entry,.achievement,.goal-card,.pr-card,.skill-card,.year-card,.plan-day{background:var(--bg);padding:12px;border-radius:10px;border:1px solid transparent}
+.stat{text-align:center}.stat strong{display:block;font-size:24px;color:var(--accent)}.achievement.unlocked{border-left:6px solid var(--accent)}.achievement.locked{opacity:.5}
+.calendar-header{display:flex;justify-content:space-between;align-items:center;gap:10px}.calendar-header button{width:auto;padding:10px 16px;margin:0}
+.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:15px}.weekday{text-align:center;font-weight:bold;color:var(--muted)}
+.day{min-height:68px;background:var(--bg);border-radius:10px;padding:8px;cursor:pointer;border:2px solid transparent}.day:hover{border-color:var(--accent)}.day.active{font-weight:bold}.day.empty{background:transparent;cursor:default}.workout-count{display:block;font-size:12px;margin-top:8px}
+.day.heat-1{background:#f3e8ff;border-color:#c084fc}.day.heat-2{background:#ddd6fe;border-color:#a78bfa}.day.heat-3{background:#c4b5fd;border-color:#8b5cf6}.day.heat-4{background:#7c3aed;color:#fff;border-color:#6d28d9}
+body.dark .day.heat-1{background:#251637} body.dark .day.heat-2{background:#3b1f63} body.dark .day.heat-3{background:#5b21b6} body.dark .day.heat-4{background:#7c3aed;color:#fff}
+.calendar-legend{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:12px}.legend-box{width:18px;height:18px;border-radius:5px;border:1px solid var(--border);display:inline-block}.legend-0{background:var(--bg)}.legend-1{background:#f3e8ff}.legend-2{background:#ddd6fe}.legend-3{background:#c4b5fd}.legend-4{background:#7c3aed}
+.exercise-card{margin-top:12px}.exercise-card strong{font-size:18px}.exercise-row{display:grid;grid-template-columns:90px 1fr 1fr;gap:10px;align-items:center}
+.delete-btn{background:var(--danger);width:auto;padding:8px 10px}table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+canvas{width:100%;max-width:900px;height:auto;display:block;margin:0 auto;background:var(--bg);border-radius:12px}
+.timer-display{font-size:42px;font-weight:bold;text-align:center;margin:18px 0;color:var(--accent)}
+.progressbar{height:14px;background:var(--bg);border-radius:99px;overflow:hidden;border:1px solid var(--border);margin-top:8px}.progressbar span{display:block;height:100%;background:var(--accent);width:0%}
+.theme-btn.locked{opacity:.45;cursor:not-allowed}.theme-btn.active,.readiness-options button.active{outline:3px solid var(--accent)}
+.title-badge{font-size:22px;font-weight:bold;color:var(--accent);text-align:center;margin:10px 0}.skill-done{color:var(--ok);font-weight:bold}.skill-lock{color:var(--muted)}
+.muscle-row,.strength-row{display:grid;grid-template-columns:130px 1fr 55px;gap:10px;align-items:center;margin:8px 0}.dumbbell-tag{display:inline-block;background:var(--soft);padding:3px 7px;border-radius:999px;font-size:12px;margin-left:5px}
+@media(max-width:700px){body{padding:10px;margin:10px auto}.exercise-row,.muscle-row,.strength-row{grid-template-columns:1fr}.day{min-height:55px;font-size:13px}table{font-size:13px}}
+</style>
+</head>
+<body>
+<h1>Workout Tracker</h1>
+
+<div class="top-actions card">
+<button onclick="toggleDarkMode()">Dark Mode wechseln</button>
+<button class="danger" onclick="clearAllData()">Alle Daten löschen</button>
+</div>
+
+<div class="card"><h2>Statistiken</h2><div class="summary-grid">
+<div class="stat"><strong id="totalWorkouts">0</strong>Workouts</div>
+<div class="stat"><strong id="totalMinutes">0</strong>Minuten</div>
+<div class="stat"><strong id="activeDays">0</strong>aktive Tage</div>
+<div class="stat"><strong id="currentStreak">0</strong>Tage Streak</div>
+<div class="stat"><strong id="todayCalories">0</strong>Kalorien heute</div>
+<div class="stat"><strong id="levelDisplay">1</strong>Level</div>
+</div></div>
+
+<div class="card"><h2>Wochen- & Monatsstatistiken</h2><div class="summary-grid">
+<div class="stat"><strong id="weekWorkouts">0</strong>Workouts diese Woche</div>
+<div class="stat"><strong id="weekMinutes">0</strong>Minuten diese Woche</div>
+<div class="stat"><strong id="weekCalories">0</strong>Kalorien diese Woche</div>
+<div class="stat"><strong id="monthWorkouts">0</strong>Workouts diesen Monat</div>
+<div class="stat"><strong id="monthMinutes">0</strong>Minuten diesen Monat</div>
+<div class="stat"><strong id="monthCalories">0</strong>Kalorien diesen Monat</div>
+</div></div>
+
+<div class="card"><h2>Level & XP</h2><div id="xpContainer"></div></div>
+<div class="card"><h2>Freigeschaltete Themes</h2><div id="themeContainer"></div><p class="small">Neue Farben werden bei Level 5, 10, 15, 20 und 30 freigeschaltet.</p></div>
+<div class="card"><h2>Titel</h2><div id="titleContainer"></div></div>
+
+<div class="card"><h2>Backup</h2><div class="backup-actions">
+<button onclick="exportBackup()">Backup exportieren</button>
+<button onclick="document.getElementById('backupInput').click()">Backup importieren</button>
+</div><input type="file" id="backupInput" accept=".json" style="display:none" onchange="importBackup(event)"><p class="small">Sichert Workouts, Gewicht, Ziele, Themes und Level-Fortschritt.</p></div>
+
+<div class="card"><h2>Ziele</h2><form id="goalsForm">
+<label>Zielgewicht in kg</label><input type="number" id="goalWeight" step="0.1" placeholder="z. B. 75">
+<label>Workout-Ziel gesamt</label><input type="number" id="goalWorkouts" placeholder="z. B. 50">
+<label>Minuten-Ziel gesamt</label><input type="number" id="goalMinutes" placeholder="z. B. 2000">
+<button type="submit">Ziele speichern</button>
+</form><div id="goalsProgress"></div></div>
+
+<div class="card"><h2>Trainingsbereitschaft</h2>
+<p class="small">Wähle aus, wie du dich heute fühlst.</p>
+<div class="readiness-options">
+<button onclick="setReadiness('tired')">😴 Müde</button>
+<button onclick="setReadiness('normal')">🙂 Normal</button>
+<button onclick="setReadiness('strong')">💪 Stark</button>
+</div><div id="readinessSuggestion"></div></div>
+
+<div class="card"><h2>Wochenplan</h2><p class="small">Ein einfacher Anfängerplan mit Bodyweight und Hanteln.</p><div id="weeklyPlanContainer" class="plan-grid"></div></div>
+<div class="card"><h2>Achievements</h2><div id="achievementsContainer"></div></div>
+<div class="card"><h2>Persönliche Rekorde</h2><div id="recordsContainer"></div></div>
+
+<div class="card"><h2>Workout Timer</h2><div class="timer-display" id="timerDisplay">00:00</div><div class="timer-controls">
+<button onclick="startTimer()">Start</button><button onclick="pauseTimer()">Pause</button><button onclick="resetTimer()">Reset</button><button onclick="useTimerAsDuration()">Zeit als Dauer übernehmen</button>
+</div><p class="small">Hinweis: Browser-Timer können pausieren, wenn das Handy im Standby ist.</p></div>
+
+<div class="card"><h2>Gewicht tracken</h2><form id="weightForm">
+<label>Datum</label><input type="date" id="weightDate" required>
+<label>Gewicht in kg</label><input type="number" id="weightValue" step="0.1" min="1" required>
+<button type="submit">Gewicht speichern</button>
+</form><h3>Gewichtsverlauf</h3><div id="weightProgress"></div></div>
+
+<div class="card"><h2>Gewichtsdiagramm</h2><canvas id="weightChart" width="900" height="300"></canvas></div>
+
+<div class="card"><div class="calendar-header">
+<button onclick="changeMonth(-1)">←</button><h2 id="calendarTitle"></h2><button onclick="changeMonth(1)">→</button>
+</div><div class="calendar-grid" id="calendarGrid"></div><div class="calendar-legend"><span class="small">Weniger</span><span class="legend-box legend-0"></span><span class="legend-box legend-1"></span><span class="legend-box legend-2"></span><span class="legend-box legend-3"></span><span class="legend-box legend-4"></span><span class="small">Mehr</span></div><div id="selectedDayDetails" class="small"></div></div>
+
+<div class="card"><h2>Workouts</h2><label>Workout auswählen</label><select id="planSelect">
+<option value="">Bitte auswählen</option>
+<option value="fullbody">Full Body Anfänger</option><option value="fullbody_plus">Full Body Anfänger Plus</option><option value="upper">Oberkörper Anfänger</option><option value="core">Core & Stabilität</option><option value="core_plus">Core Fokus Plus</option><option value="legs">Beine & Po</option><option value="cardio">Fettverbrennung / Cardio</option><option value="quick10">10-Minuten Quick Workout</option><option value="mobility">Mobility & leichtes Training</option><option value="week1">30-Tage Plan Woche 1</option><option value="week2">30-Tage Plan Woche 2</option><option value="week3">30-Tage Plan Woche 3</option><option value="week4">30-Tage Plan Woche 4</option>
+<option value="dumbbell5">Hantel A - 5 kg Anfänger</option><option value="dumbbell10">Hantel B - 10 kg Anfänger</option><option value="dumbbell15">Hantel C - 15 kg vorsichtig</option><option value="mixed_beginner">Gemischt - Bodyweight + Hanteln</option>
+</select><button onclick="loadPlan()">Workout laden</button><div id="planContainer"></div></div>
+
+<form id="manualWorkoutForm"><h2>Freies Workout eintragen</h2>
+<label>Datum</label><input type="date" id="manualDate" required>
+<label>Workout-Art</label><select id="manualType" required><option value="">Bitte auswählen</option><option>Krafttraining</option><option>Cardio</option><option>Laufen</option><option>Yoga</option><option>Stretching</option><option>Hanteltraining</option><option>Sonstiges</option></select>
+<label>Dauer in Minuten</label><input type="number" id="manualDuration" min="1" required>
+<label>Notizen</label><textarea id="manualNotes" placeholder="z. B. lockerer Lauf, Technik gut..."></textarea>
+<button type="submit">Workout speichern</button></form>
+
+<div class="card"><h2>Kalorien-Schätzung</h2><div id="calorieSummary"></div><p class="small">Grobe Schätzung basierend auf Workout-Art, Dauer und letztem Gewicht. Kein Essens-Tracking.</p></div>
+<div class="card"><h2>Kraftübersicht mit Hanteln</h2><div id="strengthContainer"></div></div>
+<div class="card"><h2>Hantel-Empfehlungen</h2><div id="dumbbellRecommendationContainer"></div></div>
+<div class="card"><h2>Automatische Progression</h2><div id="progressionContainer"></div></div>
+<div class="card"><h2>Skill Tree</h2><div id="skillTreeContainer"></div></div>
+<div class="card"><h2>Trainingsvolumen</h2><div id="volumeContainer"></div></div>
+<div class="card"><h2>Muskelgruppen-Statistik</h2><div id="muscleContainer"></div></div>
+<div class="card"><h2>Jahresrückblick</h2><div id="yearReviewContainer"></div></div>
+<div class="card"><h2>Fortschritt pro Übung</h2><div id="progressContainer"></div></div>
+
+<table><thead><tr><th>Datum</th><th>Art</th><th>Dauer</th><th>Details</th><th></th></tr></thead><tbody id="workoutList"></tbody></table>
+
+<script>
+const $=id=>document.getElementById(id);
+const calendarGrid=$("calendarGrid"),calendarTitle=$("calendarTitle"),workoutList=$("workoutList"),progressContainer=$("progressContainer"),weightProgress=$("weightProgress"),achievementsContainer=$("achievementsContainer");
+let workouts=JSON.parse(localStorage.getItem("workouts"))||[];
+let weights=JSON.parse(localStorage.getItem("weights"))||[];
+let goals=JSON.parse(localStorage.getItem("goals"))||{};
+let selectedTheme=localStorage.getItem("selectedTheme")||"purple";
+let readiness=localStorage.getItem("readiness")||"";
+let darkMode=JSON.parse(localStorage.getItem("darkMode"))||false;
+let currentMonth=new Date().getMonth(),currentYear=new Date().getFullYear(),timerSeconds=0,timerInterval=null;
+if(darkMode)document.body.classList.add("dark");
+const themes=[{id:"purple",name:"Lila",level:1},{id:"blue",name:"Blau",level:5},{id:"green",name:"Grün",level:10},{id:"red",name:"Rot",level:15},{id:"gold",name:"Gold",level:20},{id:"cyber",name:"Cyber",level:30}];
+applyTheme(selectedTheme);
+
+function getTodayString(){return new Date().toISOString().split("T")[0]}
+$("manualDate").value=getTodayString();$("weightDate").value=getTodayString();
+function saveWorkouts(){localStorage.setItem("workouts",JSON.stringify(workouts))}
+function saveWeights(){localStorage.setItem("weights",JSON.stringify(weights))}
+function saveGoals(){localStorage.setItem("goals",JSON.stringify(goals))}
+function saveTheme(){localStorage.setItem("selectedTheme",selectedTheme)}
+function toggleDarkMode(){document.body.classList.toggle("dark");localStorage.setItem("darkMode",JSON.stringify(document.body.classList.contains("dark")));renderWeightChart()}
+
+const beginnerPlans={
+fullbody:{title:"Full Body Anfänger",duration:30,exercises:[{name:"Kniebeugen",target:"3x8"},{name:"Liegestütze auf Knien",target:"3x6"},{name:"Glute Bridge",target:"3x10"},{name:"Plank",target:"3x20 Sekunden"},{name:"Bird Dog",target:"2x8 pro Seite"}]},
+fullbody_plus:{title:"Full Body Anfänger Plus",duration:35,exercises:[{name:"Kniebeugen",target:"3x12"},{name:"Liegestütze",target:"3x8"},{name:"Ausfallschritte",target:"3x8 pro Seite"},{name:"Glute Bridge",target:"3x15"},{name:"Mountain Climbers",target:"3x30 Sekunden"},{name:"Plank",target:"3x30 Sekunden"}]},
+upper:{title:"Oberkörper Anfänger",duration:25,exercises:[{name:"Wandliegestütze",target:"3x10"},{name:"Knie-Liegestütze",target:"3x6"},{name:"Schulter-Taps",target:"3x10"},{name:"Superman Hold",target:"3x20 Sekunden"},{name:"Plank",target:"3x20 Sekunden"}]},
+core:{title:"Core & Stabilität",duration:25,exercises:[{name:"Plank",target:"3x20 Sekunden"},{name:"Dead Bug",target:"3x8"},{name:"Side Plank",target:"2x15 Sekunden"},{name:"Mountain Climbers",target:"3x20 Sekunden"}]},
+core_plus:{title:"Core Fokus Plus",duration:30,exercises:[{name:"Dead Bug",target:"3x10"},{name:"Plank",target:"3x30 Sekunden"},{name:"Side Plank",target:"3x20 Sekunden"},{name:"Hollow Hold",target:"3x15 Sekunden"},{name:"Bicycle Crunches",target:"3x12"}]},
+legs:{title:"Beine & Po",duration:30,exercises:[{name:"Kniebeugen",target:"3x10"},{name:"Ausfallschritte rückwärts",target:"2x6 pro Seite"},{name:"Glute Bridge",target:"3x12"},{name:"Wandsitz",target:"3x20 Sekunden"},{name:"Wadenheben",target:"3x12"}]},
+cardio:{title:"Fettverbrennung / Cardio",duration:25,exercises:[{name:"Hampelmänner",target:"3x30 Sekunden"},{name:"High Knees",target:"3x20 Sekunden"},{name:"Mountain Climbers",target:"3x20 Sekunden"},{name:"Burpees Anfänger-Version",target:"3x5"},{name:"Kniebeugen",target:"3x12"},{name:"Plank",target:"2x30 Sekunden"}]},
+quick10:{title:"10-Minuten Quick Workout",duration:10,exercises:[{name:"Kniebeugen",target:"3 Runden x 10"},{name:"Liegestütze",target:"3 Runden x 10"},{name:"Mountain Climbers",target:"3 Runden x 20"},{name:"Plank",target:"3 Runden x 20 Sekunden"},{name:"Glute Bridges",target:"3 Runden x 10"}]},
+mobility:{title:"Mobility & leichtes Training",duration:20,exercises:[{name:"Cat Cow",target:"2x10"},{name:"World's Greatest Stretch",target:"2x5 pro Seite"},{name:"Hüftöffner",target:"2x30 Sekunden pro Seite"},{name:"Schulterkreisen",target:"2x30 Sekunden"},{name:"Tiefe Hocke halten",target:"3x20 Sekunden"}]},
+week1:{title:"30-Tage Plan Woche 1",duration:25,exercises:[{name:"Kniebeugen",target:"3x8"},{name:"Liegestütze auf Knien",target:"3x5"},{name:"Glute Bridge",target:"3x10"},{name:"Plank",target:"3x20 Sekunden"}]},
+week2:{title:"30-Tage Plan Woche 2",duration:30,exercises:[{name:"Kniebeugen",target:"3x10"},{name:"Liegestütze auf Knien",target:"3x8"},{name:"Ausfallschritte rückwärts",target:"2x6 pro Seite"},{name:"Glute Bridge",target:"3x12"},{name:"Plank",target:"3x25 Sekunden"}]},
+week3:{title:"30-Tage Plan Woche 3",duration:35,exercises:[{name:"Kniebeugen",target:"3x12"},{name:"Liegestütze",target:"3x5"},{name:"Ausfallschritte",target:"3x8 pro Seite"},{name:"Glute Bridge einbeinig",target:"2x8 pro Seite"},{name:"Plank",target:"3x30 Sekunden"}]},
+week4:{title:"30-Tage Plan Woche 4",duration:40,exercises:[{name:"Kniebeugen",target:"3x15"},{name:"Liegestütze",target:"3x8"},{name:"Ausfallschritte",target:"3x10 pro Seite"},{name:"Mountain Climbers",target:"3x30 Sekunden"},{name:"Glute Bridge",target:"3x15"},{name:"Plank",target:"3x40 Sekunden"}]},
+dumbbell5:{title:"Hantel A - Ganzkörper 5 kg",duration:25,exercises:[{name:"Goblet Squat 5 kg",target:"3x10"},{name:"Schulterdrücken 5 kg",target:"3x8"},{name:"Rudern vorgebeugt 5 kg",target:"3x10"},{name:"Romanian Deadlift 5 kg",target:"3x10"},{name:"Farmers Walk 5 kg",target:"3x30 Sekunden"}]},
+dumbbell10:{title:"Hantel B - Ganzkörper 10 kg",duration:30,exercises:[{name:"Goblet Squat 10 kg",target:"3x10"},{name:"Einarmiges Rudern 10 kg",target:"3x10 pro Seite"},{name:"Romanian Deadlift 10 kg",target:"3x10"},{name:"Floor Press 10 kg",target:"3x8"},{name:"Farmers Walk 10 kg",target:"3x30 Sekunden"}]},
+dumbbell15:{title:"Hantel C - 15 kg vorsichtig",duration:30,exercises:[{name:"Goblet Squat 15 kg",target:"3x8"},{name:"Romanian Deadlift 15 kg",target:"3x8"},{name:"Einarmiges Rudern 15 kg",target:"3x8 pro Seite"},{name:"Suitcase Carry 15 kg",target:"3x30 Sekunden pro Seite"},{name:"Glute Bridge mit 15 kg",target:"3x10"}]},
+mixed_beginner:{title:"Gemischt - Bodyweight + Hanteln",duration:30,exercises:[{name:"Kniebeugen",target:"3x10"},{name:"Liegestütze auf Knien",target:"3x6"},{name:"Goblet Squat 5 kg",target:"3x10"},{name:"Rudern vorgebeugt 5 kg",target:"3x10"},{name:"Plank",target:"3x20 Sekunden"}]}
+};
+
+const muscleMap={kniebeugen:"Beine",squat:"Beine",ausfallschritte:"Beine",glute:"Beine",deadlift:"Beine",wandsitz:"Beine",wadenheben:"Beine",liegestütze:"Brust",press:"Brust",floor:"Brust",schulter:"Schultern",plank:"Core",dead:"Core",bird:"Core",bicycle:"Core",hollow:"Core",mountain:"Cardio",hampel:"Cardio",high:"Cardio",burpees:"Cardio",cat:"Mobility",stretch:"Mobility",hüft:"Mobility",hocke:"Mobility",superman:"Rücken",rudern:"Rücken",farmers:"Grip",carry:"Grip"};
+const skillTree=[["Knie-Liegestütze","Normale Liegestütze","Diamond Pushups","Archer Pushups"],["Plank 20 Sekunden","Plank 40 Sekunden","Plank 60 Sekunden","Side Plank"],["Kniebeugen 3x10","Kniebeugen 3x15","Ausfallschritte","Einbeinige Glute Bridge"],["Goblet Squat 5 kg","Goblet Squat 10 kg","Goblet Squat 15 kg","Bulgarian Split Squat"]];
+
+function applyTheme(id){themes.forEach(t=>document.body.classList.remove("theme-"+t.id));selectedTheme=themes.find(t=>t.id===id)?id:"purple";document.body.classList.add("theme-"+selectedTheme);saveTheme()}
+function selectTheme(id){const theme=themes.find(t=>t.id===id),level=getLevel().level;if(!theme)return;if(level<theme.level){alert(`Dieses Theme wird erst mit Level ${theme.level} freigeschaltet.`);return}applyTheme(id);renderThemes();renderWeightChart()}
+function loadPlan(){const key=$("planSelect").value,container=$("planContainer");container.innerHTML="";if(!key)return;const plan=beginnerPlans[key],dateInput=document.createElement("input");dateInput.type="date";dateInput.id="planDate";dateInput.value=getTodayString();container.innerHTML=`<h3>${plan.title}</h3><p class="small">Empfohlene Dauer: ca. ${plan.duration} Minuten</p><label>Datum</label>`;container.appendChild(dateInput);plan.exercises.forEach((ex,i)=>{const card=document.createElement("div");card.className="exercise-card";card.innerHTML=`<strong>${ex.name}</strong><p class="small">Ziel: ${ex.target}</p><div class="exercise-row"><label>Erledigt<input type="checkbox" id="done-${i}"></label><label>Ergebnis<input type="text" id="result-${i}" placeholder="z. B. 3x10 oder 30 Sek."></label><label>Gefühl<select id="feeling-${i}"><option value="">-</option><option value="leicht">leicht</option><option value="okay">okay</option><option value="schwer">schwer</option><option value="zu schwer">zu schwer</option></select></label></div><label>Notiz</label><input type="text" id="note-${i}" placeholder="z. B. Technik war gut">`;container.appendChild(card)});const b=document.createElement("button");b.textContent="Workout speichern";b.onclick=savePlannedWorkout;container.appendChild(b)}
+function savePlannedWorkout(){const key=$("planSelect").value;if(!key)return;const plan=beginnerPlans[key],date=$("planDate").value,exercises=plan.exercises.map((ex,i)=>({name:ex.name,target:ex.target,done:$(`done-${i}`).checked,result:$(`result-${i}`).value,feeling:$(`feeling-${i}`).value,note:$(`note-${i}`).value})),done=exercises.filter(e=>e.done).length,calories=estimateWorkoutCalories(plan.title,plan.duration,exercises);workouts.push({id:Date.now(),date,type:plan.title,duration:plan.duration,notes:`${done}/${exercises.length} Übungen erledigt`,exercises,calories});saveWorkouts();renderAll();alert(`Workout gespeichert! Geschätzte Kalorien: ${calories} kcal`)}
+
+$("manualWorkoutForm").addEventListener("submit",e=>{e.preventDefault();const type=$("manualType").value,duration=Number($("manualDuration").value),calories=estimateWorkoutCalories(type,duration,[]);workouts.push({id:Date.now(),date:$("manualDate").value,type,duration,notes:$("manualNotes").value,exercises:[],calories});saveWorkouts();renderAll();e.target.reset();$("manualDate").value=getTodayString();alert(`Workout gespeichert! Geschätzte Kalorien: ${calories} kcal`)});
+$("weightForm").addEventListener("submit",e=>{e.preventDefault();weights.push({id:Date.now(),date:$("weightDate").value,weight:Number($("weightValue").value)});saveWeights();renderAll();e.target.reset();$("weightDate").value=getTodayString()});
+$("goalsForm").addEventListener("submit",e=>{e.preventDefault();goals={weight:Number($("goalWeight").value)||null,workouts:Number($("goalWorkouts").value)||null,minutes:Number($("goalMinutes").value)||null};saveGoals();renderAll();alert("Ziele gespeichert!")});
+
+function renderAll(){renderStats();renderPeriodStats();renderXP();renderThemes();renderTitle();renderGoals();renderReadiness();renderWeeklyPlan();renderAchievements();renderRecords();renderCalendar();renderWorkoutList();renderProgress();renderWeightProgress();renderWeightChart();renderCalorieSummary();renderStrength();renderDumbbellRecommendations();renderProgression();renderSkillTree();renderVolume();renderMuscles();renderYearReview();updateTimerDisplay()}
+function renderStats(){const days=[...new Set(workouts.map(w=>w.date))],today=getTodayString();$("totalWorkouts").textContent=workouts.length;$("totalMinutes").textContent=workouts.reduce((s,w)=>s+Number(w.duration||0),0);$("activeDays").textContent=days.length;$("currentStreak").textContent=calculateStreak(days);$("todayCalories").textContent=getCaloriesForRange(today,today);$("levelDisplay").textContent=getLevel().level}
+function renderPeriodStats(){const today=new Date(),startWeek=new Date(today),day=startWeek.getDay(),diff=day===0?-6:1-day;startWeek.setDate(today.getDate()+diff);startWeek.setHours(0,0,0,0);const startMonth=new Date(today.getFullYear(),today.getMonth(),1),week=workouts.filter(w=>new Date(w.date)>=startWeek&&new Date(w.date)<=today),month=workouts.filter(w=>new Date(w.date)>=startMonth&&new Date(w.date)<=today);$("weekWorkouts").textContent=week.length;$("weekMinutes").textContent=week.reduce((s,w)=>s+Number(w.duration||0),0);$("weekCalories").textContent=week.reduce((s,w)=>s+Number(w.calories||0),0);$("monthWorkouts").textContent=month.length;$("monthMinutes").textContent=month.reduce((s,w)=>s+Number(w.duration||0),0);$("monthCalories").textContent=month.reduce((s,w)=>s+Number(w.calories||0),0)}
+function calculateStreak(days){if(!days.length)return 0;const set=new Set(days);let streak=0,d=new Date();while(true){const s=d.toISOString().split("T")[0];if(set.has(s)){streak++;d.setDate(d.getDate()-1)}else break}return streak}
+function getTotalXP(){return Math.round(workouts.reduce((sum,w)=>sum+50+Number(w.duration||0)*2+Number(w.calories||0)/5,0))}
+function xpNeededForLevel(level){return Math.round(300*Math.pow(level,1.35))}
+function getLevel(){const total=getTotalXP();let level=1,used=0;while(total>=used+xpNeededForLevel(level)){used+=xpNeededForLevel(level);level++}const current=total-used,needed=xpNeededForLevel(level),next=needed-current,percent=Math.min(100,current/needed*100);return{xp:total,level,currentXP:current,needed,next,percent}}
+function renderXP(){const l=getLevel();$("xpContainer").innerHTML=`<div class="goal-card"><strong>Level ${l.level}</strong><br>Gesamt-XP: ${l.xp}<br>XP in diesem Level: ${l.currentXP} / ${l.needed}<br>Benötigt für Level ${l.level+1}: ${l.needed} XP<br>Noch bis Level ${l.level+1}: ${l.next} XP<div class="progressbar"><span style="width:${l.percent}%"></span></div><p class="small">Je höher dein Level ist, desto mehr XP brauchst du für das nächste Level.</p></div>`}
+function renderThemes(){const level=getLevel().level;$("themeContainer").innerHTML=`<div class="theme-grid">${themes.map(t=>{const unlocked=level>=t.level,active=selectedTheme===t.id;return`<button class="theme-btn ${unlocked?"":"locked"} ${active?"active":""}" onclick="selectTheme('${t.id}')">${unlocked?"🎨":"🔒"} ${t.name}<br><span class="small">Level ${t.level}</span></button>`}).join("")}</div>`}
+function getTrainingTitle(){const l=getLevel().level;if(l>=75)return"Elite Athlete";if(l>=50)return"Iron Disciple";if(l>=35)return"Bodyweight Veteran";if(l>=20)return"Athlet";if(l>=10)return"Trainierender";if(l>=5)return"Starter";return"Anfänger"}
+function renderTitle(){$("titleContainer").innerHTML=`<div class="title-badge">${getTrainingTitle()}</div><p class="small" style="text-align:center">Aktuelles Level: ${getLevel().level}</p>`}
+function renderGoals(){if(goals.weight)$("goalWeight").value=goals.weight;if(goals.workouts)$("goalWorkouts").value=goals.workouts;if(goals.minutes)$("goalMinutes").value=goals.minutes;const latest=getLatestWeight(),minutes=workouts.reduce((s,w)=>s+Number(w.duration||0),0);let html="";if(goals.weight){const start=weights.length?[...weights].sort((a,b)=>a.date.localeCompare(b.date))[0].weight:latest,total=Math.abs(start-goals.weight)||1,done=Math.min(100,Math.abs(start-latest)/total*100);html+=goalHTML("Zielgewicht",`${latest} kg → ${goals.weight} kg`,done)}if(goals.workouts)html+=goalHTML("Workout-Ziel",`${workouts.length} / ${goals.workouts}`,Math.min(100,workouts.length/goals.workouts*100));if(goals.minutes)html+=goalHTML("Minuten-Ziel",`${minutes} / ${goals.minutes}`,Math.min(100,minutes/goals.minutes*100));$("goalsProgress").innerHTML=html||`<p class="small">Noch keine Ziele gespeichert.</p>`}
+function goalHTML(t,text,pct){return`<div class="goal-card"><strong>${t}</strong><br>${text}<div class="progressbar"><span style="width:${pct}%"></span></div></div>`}
+function setReadiness(v){readiness=v;localStorage.setItem("readiness",v);renderReadiness()}
+function renderReadiness(){document.querySelectorAll(".readiness-options button").forEach(b=>b.classList.remove("active"));document.querySelectorAll(".readiness-options button").forEach(b=>{if((readiness==="tired"&&b.textContent.includes("Müde"))||(readiness==="normal"&&b.textContent.includes("Normal"))||(readiness==="strong"&&b.textContent.includes("Stark")))b.classList.add("active")});let s="Wähle deine Tagesform aus.";if(readiness==="tired")s="Heute passt: Mobility & leichtes Training oder 10-Minuten Quick Workout.";if(readiness==="normal")s="Heute passt: Full Body Anfänger oder Hantel A mit 5 kg.";if(readiness==="strong")s="Heute passt: Hantel B mit 10 kg oder Full Body Anfänger Plus.";$("readinessSuggestion").innerHTML=`<div class="goal-card"><strong>Empfehlung:</strong><br>${s}</div>`}
+function renderWeeklyPlan(){const days=[["Montag","Hantel A - 5 kg"],["Dienstag","Pause / Mobility"],["Mittwoch","Full Body Anfänger"],["Donnerstag","Pause"],["Freitag","Hantel B - 10 kg"],["Samstag","Optional: Spaziergang / Mobility"],["Sonntag","Pause"]];$("weeklyPlanContainer").innerHTML=days.map(([d,p])=>`<div class="plan-day"><strong>${d}</strong><br>${p}</div>`).join("")}
+function renderAchievements(){const total=workouts.reduce((s,w)=>s+Number(w.duration||0),0),days=[...new Set(workouts.map(w=>w.date))],streak=calculateStreak(days),level=getLevel().level;let change=0;if(weights.length>=2){const sorted=[...weights].sort((a,b)=>a.date.localeCompare(b.date));change=sorted.at(-1).weight-sorted[0].weight}const a=[["Erstes Workout",workouts.length>=1],["5 Workouts abgeschlossen",workouts.length>=5],["10 Workouts abgeschlossen",workouts.length>=10],["25 Workouts abgeschlossen",workouts.length>=25],["7 Tage Streak",streak>=7],["30 aktive Tage",days.length>=30],["500 Trainingsminuten",total>=500],["1000 Trainingsminuten",total>=1000],["Gewicht regelmäßig getrackt",weights.length>=5],["5 kg Veränderung getrackt",Math.abs(change)>=5],["Level 5 erreicht",level>=5],["Blaues Theme freigeschaltet",level>=5],["Gold Theme freigeschaltet",level>=20],["1000 kcal Training",workouts.reduce((s,w)=>s+Number(w.calories||0),0)>=1000]];achievementsContainer.innerHTML=a.map(([t,u])=>`<div class="achievement ${u?"unlocked":"locked"}">${u?"🏆":"🔒"} ${t}</div>`).join("")}
+function parseBest(text){if(!text)return 0;const nums=(text.match(/\d+/g)||[]).map(Number);return nums.reduce((a,b)=>a+b,0)}
+function renderRecords(){const rec={};workouts.forEach(w=>(w.exercises||[]).forEach(e=>{const v=parseBest(e.result);if(v&&(!rec[e.name]||v>rec[e.name].value))rec[e.name]={value:v,date:w.date,result:e.result}}));const names=Object.keys(rec);$("recordsContainer").innerHTML=names.length?names.map(n=>`<div class="pr-card">🏆 <strong>${n}</strong><br>${rec[n].result} am ${rec[n].date}</div>`).join(""):`<p class="small">Noch keine Rekorde gespeichert.</p>`}
+function getCalendarHeatClass(m){if(m>=60)return"heat-4";if(m>=40)return"heat-3";if(m>=20)return"heat-2";if(m>0)return"heat-1";return""}
+function renderCalendar(){calendarGrid.innerHTML="";["Mo","Di","Mi","Do","Fr","Sa","So"].forEach(day=>{const el=document.createElement("div");el.className="weekday";el.textContent=day;calendarGrid.appendChild(el)});const names=["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];calendarTitle.textContent=`${names[currentMonth]} ${currentYear}`;const first=new Date(currentYear,currentMonth,1),last=new Date(currentYear,currentMonth+1,0);let start=first.getDay();start=start===0?6:start-1;for(let i=0;i<start;i++){const e=document.createElement("div");e.className="day empty";calendarGrid.appendChild(e)}for(let day=1;day<=last.getDate();day++){const date=`${currentYear}-${String(currentMonth+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`,list=workouts.filter(w=>w.date===date),mins=list.reduce((s,w)=>s+Number(w.duration||0),0),el=document.createElement("div");el.className=`day ${getCalendarHeatClass(mins)}`;if(list.length)el.classList.add("active");el.innerHTML=`${day}${list.length?`<span class="workout-count">${mins} Min.<br>${list.length} Workout${list.length>1?"s":""}</span>`:""}`;el.onclick=()=>showDayDetails(date);calendarGrid.appendChild(el)}}
+function showDayDetails(date){const list=workouts.filter(w=>w.date===date);$("selectedDayDetails").innerHTML=list.length?`<h3>Workouts am ${date}</h3>${list.map(w=>`<p><strong>${w.type}</strong><br>Dauer: ${w.duration} Minuten<br>Kalorien: ${w.calories||0} kcal<br>${w.notes||""}</p>`).join("")}`:`<p>Keine Workouts am ${date}.</p>`}
+function changeMonth(dir){currentMonth+=dir;if(currentMonth<0){currentMonth=11;currentYear--}if(currentMonth>11){currentMonth=0;currentYear++}renderCalendar()}
+function renderWorkoutList(){workoutList.innerHTML="";[...workouts].sort((a,b)=>b.date.localeCompare(a.date)).forEach(w=>{const details=w.exercises?.length?w.exercises.map(e=>`<div><strong>${e.name}</strong>: ${e.result||"kein Ergebnis"} ${e.done?"✓":""} ${e.feeling?`(${e.feeling})`:""}</div>`).join(""):w.notes||"-";const row=document.createElement("tr");row.innerHTML=`<td>${w.date}</td><td>${w.type}</td><td>${w.duration} Min.<br><span class="small">${w.calories||0} kcal</span></td><td>${details}</td><td><button class="delete-btn" onclick="deleteWorkout(${w.id})">Löschen</button></td>`;workoutList.appendChild(row)})}
+function renderProgress(){const map={};workouts.forEach(w=>(w.exercises||[]).forEach(e=>{if(!e.result)return;(map[e.name] ||= []).push({date:w.date,result:e.result,feeling:e.feeling})}));const names=Object.keys(map);progressContainer.innerHTML=names.length?names.map(n=>`<p><strong>${n}</strong><br>${map[n].sort((a,b)=>a.date.localeCompare(b.date)).map(e=>`${e.date}: ${e.result}${e.feeling?` (${e.feeling})`:""}`).join("<br>")}</p>`).join(""):`<p class="small">Noch kein Übungsfortschritt gespeichert.</p>`}
+function renderWeightProgress(){if(!weights.length){weightProgress.innerHTML=`<p class="small">Noch kein Gewicht gespeichert.</p>`;return}const sorted=[...weights].sort((a,b)=>a.date.localeCompare(b.date)),first=sorted[0].weight,latest=sorted.at(-1).weight,diff=(latest-first).toFixed(1);weightProgress.innerHTML=`<p><strong>Startgewicht:</strong> ${first} kg<br><strong>Aktuelles Gewicht:</strong> ${latest} kg<br><strong>Veränderung:</strong> ${diff>0?"+":""}${diff} kg</p>${sorted.map(e=>`<div class="weight-entry">${e.date}: <strong>${e.weight} kg</strong> <button class="delete-btn" onclick="deleteWeight(${e.id})">Löschen</button></div>`).join("")}`}
+function renderWeightChart(){const canvas=$("weightChart"),ctx=canvas.getContext("2d"),text=document.body.classList.contains("dark")?"#f7f2ff":"#222";ctx.clearRect(0,0,canvas.width,canvas.height);if(weights.length<2){ctx.font="18px Arial";ctx.fillStyle=text;ctx.fillText("Mindestens 2 Gewichtseinträge nötig für ein Diagramm.",30,150);return}const sorted=[...weights].sort((a,b)=>a.date.localeCompare(b.date)),pad=50,cw=canvas.width-pad*2,ch=canvas.height-pad*2,vals=sorted.map(e=>e.weight),min=Math.min(...vals)-1,max=Math.max(...vals)+1,getX=i=>pad+i*(cw/(sorted.length-1)),getY=w=>pad+ch-((w-min)/(max-min))*ch;ctx.strokeStyle=text;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(pad,pad);ctx.lineTo(pad,pad+ch);ctx.lineTo(pad+cw,pad+ch);ctx.stroke();ctx.strokeStyle=getComputedStyle(document.body).getPropertyValue("--accent");ctx.lineWidth=3;ctx.beginPath();sorted.forEach((e,i)=>{const x=getX(i),y=getY(e.weight);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke();sorted.forEach((e,i)=>{const x=getX(i),y=getY(e.weight);ctx.fillStyle=getComputedStyle(document.body).getPropertyValue("--accent");ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();ctx.fillStyle=text;ctx.font="12px Arial";ctx.fillText(`${e.weight} kg`,x-18,y-10);ctx.fillText(e.date.slice(5),x-15,canvas.height-15)})}
+function getLatestWeight(){if(!weights.length)return 70;return Number([...weights].sort((a,b)=>a.date.localeCompare(b.date)).at(-1).weight)||70}
+function getMET(type){const l=(type||"").toLowerCase();if(l.includes("cardio")||l.includes("fett"))return 6.5;if(l.includes("laufen"))return 8;if(l.includes("hantel")||l.includes("dumbbell"))return 5;if(l.includes("kraft"))return 5;if(l.includes("yoga")||l.includes("mobility")||l.includes("stretch"))return 2.8;if(l.includes("core"))return 4;if(l.includes("quick"))return 6;if(l.includes("beine")||l.includes("full body")||l.includes("bodyweight"))return 4.5;return 4}
+function estimateWorkoutCalories(type,duration,exercises){const weight=getLatestWeight(),met=getMET(type);if(exercises?.length){const done=exercises.filter(e=>e.done).length,f=Math.max(.4,done/exercises.length);return Math.round(met*weight*(duration/60)*f)}return Math.round(met*weight*(duration/60))}
+function getCaloriesForRange(start,end){return workouts.filter(w=>w.date>=start&&w.date<=end).reduce((s,w)=>s+Number(w.calories||0),0)}
+function renderCalorieSummary(){const today=getTodayString(),tc=getCaloriesForRange(today,today),total=workouts.reduce((s,w)=>s+Number(w.calories||0),0),latest=workouts.length?[...workouts].sort((a,b)=>b.date.localeCompare(a.date))[0]:null;$("calorieSummary").innerHTML=`<strong>Heute:</strong> ${tc} kcal<br><strong>Gesamt:</strong> ${total} kcal<br><strong>Letztes Workout:</strong> ${latest?`${latest.type} — ${latest.calories||0} kcal`:"noch keines"}`}
+function extractKg(name){const m=(name||"").match(/(\d+)\s*kg/i);return m?Number(m[1]):0}
+function baseExerciseName(name){return(name||"").replace(/\d+\s*kg/gi,"").trim()}
+function renderStrength(){const best={};workouts.forEach(w=>(w.exercises||[]).forEach(e=>{const kg=extractKg(e.name);if(!kg)return;const base=baseExerciseName(e.name),reps=parseBest(e.result),score=kg*Math.max(1,reps);if(!best[base]||score>best[base].score)best[base]={kg,reps,result:e.result||"-",date:w.date,score}}));const entries=Object.entries(best),max=Math.max(1,...entries.map(([_,v])=>v.score));$("strengthContainer").innerHTML=entries.length?entries.map(([n,v])=>`<div class="strength-row"><strong>${n}</strong><div class="progressbar"><span style="width:${Math.min(100,v.score/max*100)}%"></span></div><span>${v.kg} kg</span></div><p class="small">Bestes Ergebnis: ${v.result} am ${v.date}</p>`).join(""):`<p class="small">Noch keine Hantel-Daten gespeichert.</p>`}
+function renderDumbbellRecommendations(){const latest={};workouts.forEach(w=>(w.exercises||[]).forEach(e=>{const kg=extractKg(e.name);if(!kg)return;const base=baseExerciseName(e.name),reps=parseBest(e.result);if(!latest[base]||w.date>=latest[base].date)latest[base]={kg,reps,date:w.date,result:e.result}}));const recs=[];Object.entries(latest).forEach(([base,v])=>{if(v.kg===5&&v.reps>=30)recs.push(`${base}: Wenn ${v.result} sauber war, probiere 10 kg mit weniger Wiederholungen.`);if(v.kg===10&&v.reps>=30)recs.push(`${base}: Wenn ${v.result} sauber war, probiere 15 kg vorsichtig mit 3x6-8.`);if(v.kg===15)recs.push(`${base}: Bleib erstmal bei 15 kg und steigere Technik oder Wiederholungen langsam.`)});$("dumbbellRecommendationContainer").innerHTML=recs.length?recs.map(r=>`<div class="goal-card">💡 ${r}</div>`).join(""):`<p class="small">Noch keine Empfehlungen. Trage Hantel-Ergebnisse wie 3x10 ein.</p>`}
+function renderProgression(){const rec={};workouts.forEach(w=>(w.exercises||[]).forEach(e=>{const v=parseBest(e.result);if(v&&(!rec[e.name]||v>rec[e.name]))rec[e.name]=v}));const entries=Object.entries(rec).slice(0,8);$("progressionContainer").innerHTML=entries.length?entries.map(([n,v])=>`<div class="goal-card"><strong>${n}</strong><br>Bester Wert: ${v}<br>Nächstes Ziel: ${Math.ceil(v*1.1)}</div>`).join(""):`<p class="small">Noch nicht genug Übungsdaten für Vorschläge.</p>`}
+function renderSkillTree(){const txt=JSON.stringify(workouts).toLowerCase();$("skillTreeContainer").innerHTML=skillTree.map(branch=>`<div class="skill-card">${branch.map(s=>{const hit=txt.includes(s.toLowerCase().split(" ")[0]);return`<div class="${hit?"skill-done":"skill-lock"}">${hit?"✅":"🔒"} ${s}</div>`}).join("")}</div>`).join("")}
+function renderVolume(){const vol={};workouts.forEach(w=>(w.exercises||[]).forEach(e=>{const v=parseBest(e.result);if(v)vol[e.name]=(vol[e.name]||0)+v}));const entries=Object.entries(vol).sort((a,b)=>b[1]-a[1]).slice(0,10);$("volumeContainer").innerHTML=entries.length?entries.map(([n,v])=>`<div><strong>${n}:</strong> ${v}</div>`).join(""):`<p class="small">Noch kein Volumen gespeichert.</p>`}
+function muscleOf(name){const l=name.toLowerCase();for(const k in muscleMap)if(l.includes(k))return muscleMap[k];return"Sonstiges"}
+function renderMuscles(){const m={};workouts.forEach(w=>(w.exercises||[]).forEach(e=>{if(!e.done&&!e.result)return;const g=muscleOf(e.name);m[g]=(m[g]||0)+1}));const max=Math.max(1,...Object.values(m));$("muscleContainer").innerHTML=Object.entries(m).length?Object.entries(m).map(([g,v])=>`<div class="muscle-row"><strong>${g}</strong><div class="progressbar"><span style="width:${v/max*100}%"></span></div><span>${v}</span></div>`).join(""):`<p class="small">Noch keine Muskelgruppen-Daten.</p>`}
+function renderYearReview(){const y=new Date().getFullYear(),list=workouts.filter(w=>w.date.startsWith(String(y))),mins=list.reduce((s,w)=>s+Number(w.duration||0),0),cal=list.reduce((s,w)=>s+Number(w.calories||0),0),days=[...new Set(list.map(w=>w.date))].length,months={};list.forEach(w=>{const m=w.date.slice(0,7);months[m]=(months[m]||0)+1});const best=Object.entries(months).sort((a,b)=>b[1]-a[1])[0];$("yearReviewContainer").innerHTML=`<div class="year-card"><strong>${y}</strong><br>Workouts: ${list.length}<br>Trainingszeit: ${mins} Minuten<br>Kalorien: ${cal} kcal<br>Aktive Tage: ${days}<br>Bester Monat: ${best?best[0]+" mit "+best[1]+" Workouts":"noch keiner"}</div>`}
+function updateTimerDisplay(){const m=String(Math.floor(timerSeconds/60)).padStart(2,"0"),s=String(timerSeconds%60).padStart(2,"0");$("timerDisplay").textContent=`${m}:${s}`}
+function startTimer(){if(timerInterval)return;timerInterval=setInterval(()=>{timerSeconds++;updateTimerDisplay()},1000)}
+function pauseTimer(){clearInterval(timerInterval);timerInterval=null}
+function resetTimer(){pauseTimer();timerSeconds=0;updateTimerDisplay()}
+function useTimerAsDuration(){$("manualDuration").value=Math.max(1,Math.round(timerSeconds/60))}
+function exportBackup(){const data={version:6,exportedAt:new Date().toISOString(),workouts,weights,goals,selectedTheme,readiness};const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="workout_backup.json";a.click();URL.revokeObjectURL(url)}
+function importBackup(event){const file=event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const data=JSON.parse(reader.result);workouts=data.workouts||[];weights=data.weights||[];goals=data.goals||{};selectedTheme=data.selectedTheme||"purple";readiness=data.readiness||"";saveWorkouts();saveWeights();saveGoals();applyTheme(selectedTheme);renderAll();alert("Backup importiert!")}catch(e){alert("Backup konnte nicht gelesen werden.")}};reader.readAsText(file)}
+function deleteWorkout(id){workouts=workouts.filter(w=>w.id!==id);saveWorkouts();renderAll()}
+function deleteWeight(id){weights=weights.filter(e=>e.id!==id);saveWeights();renderAll()}
+function clearAllData(){if(!confirm("Wirklich alle gespeicherten Workouts und Gewichtseinträge löschen?"))return;workouts=[];weights=[];goals={};saveWorkouts();saveWeights();saveGoals();renderAll()}
+if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("service-worker.js").catch(console.log));
+renderAll();
+</script>
+</body>
+</html>
