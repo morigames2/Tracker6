@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workout Tracker Master</title>
+<style>
+:root {
+  --bg: #f4f4f4;
+  --card: #ffffff;
+  --text: #222222;
+  --muted: #666666;
+  --accent: #8b5cf6;
+  --accent2: #a78bfa;
+  --success: #10b981;
+  --border: #e2e8f0;
+  --soft: #f3f4f6;
+  --shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+body.dark {
+  --bg: #0b0f19;
+  --card: #151b2b;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --border: #2d3748;
+  --soft: #1a202c;
+}
+
+body.theme-purple { --accent: #8b5cf6; --accent2: #a78bfa; }
+body.theme-blue   { --accent: #3b82f6; --accent2: #60a5fa; }
+body.theme-green  { --accent: #10b981; --accent2: #34d399; }
+body.theme-red    { --accent: #ef4444; --accent2: #f87171; }
+body.theme-gold   { --accent: #d97706; --accent2: #fbbf24; }
+
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+body { background: var(--bg); color: var(--text); line-height: 1.5; padding: 20px; transition: background 0.3s; }
+.container { max-width: 900px; margin: 0 auto; }
+
+.card { background: var(--card); border-radius: 16px; padding: 24px; box-shadow: var(--shadow); margin-bottom: 20px; border: 1px solid var(--border); }
+h1, h2, h3 { text-align: center; margin-bottom: 16px; }
+h1 { color: var(--accent); font-size: 2rem; }
+
+.grid { display: grid; gap: 12px; }
+.summary-grid { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); text-align: center; }
+.stat { background: var(--soft); padding: 14px; border-radius: 12px; transition: transform 0.2s; }
+.stat:hover { transform: translateY(-2px); }
+.stat strong { display: block; font-size: 1.8rem; color: var(--accent); margin-bottom: 4px; }
+
+input, select, textarea { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); margin-top: 6px; font-size: 1rem; }
+input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent2); }
+button { background: var(--accent); color: #fff; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: opacity 0.2s; margin-top: 10px; }
+button:hover { opacity: 0.85; }
+.danger { background: var(--accent) !important; filter: saturate(0.3) brightness(1.1); }
+
+/* Calendar */
+.calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.day-label { text-align: center; color: var(--muted); font-weight: bold; font-size: 0.85rem; padding-bottom: 5px; }
+.day-cell { background: var(--soft); height: 60px; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
+.day-cell:hover { border-color: var(--accent); }
+.day-cell.today { border: 2px solid var(--accent); background: rgba(139, 92, 246, 0.1); font-weight: bold; }
+.day-cell.has-workout { background: var(--accent); color: white; }
+.day-cell small { margin-top: 4px; opacity: 0.7; font-size: 0.8rem; }
+
+/* Daily Suggestion */
+.suggestion-card { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; padding: 20px; border-radius: 14px; text-align: center; margin-bottom: 15px; }
+.suggestion-card h3 { margin: 0 0 8px; color: inherit; }
+
+/* Workouts & Table */
+.table-scroll { overflow-x: auto; max-width: 100%; }
+table { width: 100%; border-collapse: collapse; min-width: 500px; background: var(--card); color: var(--text); }
+th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.95rem; }
+th { background: var(--soft); color: var(--muted); }
+
+.theme-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-top: 10px; }
+.theme-btn { padding: 14px; border-radius: 10px; cursor: pointer; text-align: center; font-weight: bold; transition: transform 0.2s; border: 2px solid transparent; }
+.theme-btn:hover { transform: scale(1.03); }
+.theme-btn.active { border-color: var(--text); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+
+#resultPreview { font-size: 0.9rem; margin-top: 6px; min-height: 20px; color: var(--accent); font-weight: 600; }
+canvas { width: 100%; height: auto; background: var(--card); border-radius: 12px; display: block; margin-top: 10px; border: 1px solid var(--border); }
+
+@media (max-width: 600px) {
+  body { padding: 12px; }
+  .card { padding: 18px; }
+  h1 { font-size: 1.6rem; }
+}
+</style>
+</head>
+<body class="theme-purple">
+<div class="container">
+  <header><h1>🏋️ Workout & Gewicht Tracker</h1></header>
+
+  <!-- STATS -->
+  <div class="card">
+    <div class="grid summary-grid">
+      <div class="stat"><strong id="s_totalWk">0</strong>Workouts</div>
+      <div class="stat"><strong id="s_totalMin">0</strong>Minuten</div>
+      <div class="stat"><strong id="s_streak">0</strong>Tage Streak</div>
+      <div class="stat"><strong id="s_xp">0</strong>Punkte</div>
+    </div>
+  </div>
+
+  <!-- DAILY AUTOMATIC SUGGESTION -->
+  <div class="card">
+    <div class="suggestion-card" id="dailySuggestion">
+      <h3>Automatische Empfehlung für heute</h3>
+      <p id="suggestionText">Lade Vorschlag...</p>
+      <button onclick="applyDailySuggestion()" style="background:rgba(255,255,255,0.2); margin-top:10px; padding:8px 16px;">Diesen Plan übernehmen</button>
+    </div>
+  </div>
+
+  <!-- CALENDAR -->
+  <div class="card">
+    <h2>Kalender</h2>
+    <div class="calendar-header">
+      <button onclick="changeMonth(-1)">←</button>
+      <h3 id="calTitle" style="margin:0">Juni 2026</h3>
+      <button onclick="changeMonth(1)">→</button>
+    </div>
+    <div class="calendar-grid" id="calendarGrid"></div>
+  </div>
+
+  <!-- WEIGHT TRACKING -->
+  <div class="card">
+    <h2>Gewicht tracken</h2>
+    <form id="wbForm">
+      <label>Datum</label><input type="date" id="wbDate" required>
+      <label>Gewicht (kg)</label><input type="number" step="0.1" id="wbValue" required>
+      <button type="submit">Speichern</button>
+    </form>
+  </div>
+
+  <!-- WEIGHT CHART -->
+  <div class="card">
+    <h2>Gewichtsverlauf</h2>
+    <canvas id="wChart"></canvas>
+  </div>
+
+  <!-- WORKOUT LOGGING -->
+  <div class="card">
+    <h2>Workout eintragen</h2>
+    <form id="wkForm">
+      <label>Datum</label><input type="date" id="wkDate" required>
+      <label>Typ</label>
+      <select id="wkType" onchange="renderExerciseFields()">
+        <option value="strength">Kraft & Muskelaufbau</option>
+        <option value="cardio">Cardio & Fettverbrennung</option>
+        <option value="yoga">Yoga & Mobility</option>
+        <option value="running">Laufen / Ausdauer</option>
+        <option value="freestyle">Freestyle</option>
+      </select>
+
+      <label>Dauer (Min)</label><input type="number" id="wkMinutes" required min="1">
+
+      <h3 style="margin-top:20px">Übungen & Ergebnisse</h3>
+      <div id="exerciseContainer"><p class="small">Wähle oben einen Typ, um die Liste zu laden.</p></div>
+
+      <button type="submit">💾 Workout speichern</button>
+    </form>
+  </div>
+
+  <!-- LOG TABLE -->
+  <div class="card">
+    <h2>Gespeicherte Workouts</h2>
+    <div class="table-scroll"><table id="logTable"><thead><tr><th>Datum</th><th>Typ</th><th>Zeit</th><th>Aktion</th></tr></thead><tbody id="logBody"></tbody></table></div>
+  </div>
+
+  <!-- THEMES & DATA -->
+  <div class="card">
+    <h2>Erscheinungsbild</h2>
+    <div class="theme-grid">
+      <div class="theme-btn" style="background:#f3e8ff;color:#5b21b6" onclick="setTheme('purple')">Lila</div>
+      <div class="theme-btn" style="background:#dbeafe;color:#1e40af" onclick="setTheme('blue')">Blau</div>
+      <div class="theme-btn" style="background:#d1fae5;color:#065f46" onclick="setTheme('green')">Grün</div>
+      <div class="theme-btn" style="background:#fee2e2;color:#991b1b" onclick="setTheme('red')">Rot</div>
+      <div class="theme-btn" style="background:#fef3c7;color:#92400e" onclick="setTheme('gold')">Gold</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <button class="danger" onclick="clearAll()">🗑️ Alle Daten zurücksetzen</button>
+  </div>
+</div>
+
+<script>
+/* ================= DATEN & CONFIG ================= */
+const STORAGE_KEY = 'wt_app_v2';
+let appData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
+  workouts: [], weights: [], theme: 'purple'
+};
+
+// Workouts als Datenstruktur für automatische Vorschläge & Parser
+const WORKOUT_PLANS = [
+  { id: 'full_squat', title: 'Full Body Fokus (Hauptgew.: Beine)', type: 'strength', duration: 45, exercises: ['Kniebeugen', 'Ausfallschritte', 'Plank'] },
+  { id: 'upper_push', title: 'Oberkörper Fokus (Schieben)', type: 'strength', duration: 30, exercises: ['Liegestütz schwer', 'Militärdrücken (Hantel)', 'Seitheben'] },
+  { id: 'lower_pull', title: 'unterer Rücken & Beine', type: 'strength', duration: 40, exercises: ['Kreuzheben leicht bis mittel', 'Rudern vorgebeugt', 'Wadenheben'] },
+  { id: 'cardio_hiit', title: 'HIIT Cardio & Core', type: 'cardio', duration: 35, exercises: ['Hampelmänner', 'Mountain Climbers', 'Plank + Knie zur Elle'] },
+  { id: 'mobility_yoga', title: 'Yoga Flow & Mobility', type: 'yoga', duration: 45, exercises: ['Herabschauender Hund', 'Satz von Cobra', 'Hüftöffner tief'] },
+  { id: 'run_carden', title: 'Laufen im Gemütlichen Tempo', type: 'running', duration: 30, exercises: ['Aufwärmen 5 Min', '10 Min Laufen', 'Cool Down + Stretching'] }
+];
+
+let currentMonth = new Date().getMonth();
+let currentYear = new Date().getFullYear();
+
+/* ================= HILFSFUNKTIONEN ================= */
+const $ = s => document.querySelector(s);
+const saveData = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+const todayStr = () => new Date().toISOString().split('T')[0];
+
+/* ================= TÄGLICHE AUTOMATISCHE EMPFEHLUNG ================= */
+function updateDailySuggestion() {
+  const date = new Date();
+  // Kombination aus Wochentag (0-6) und Woche im Monat sorgt für zyklische Abwechslung
+  const dayOfWeek = (date.getDay() + 6) % 7; // Mo=0 ... So=6
+  const weekInMonth = Math.floor(date.getDate() / 7);
+  let index = (dayOfWeek + weekInMonth) % WORKOUT_PLANS.length;
+
+  const plan = WORKOUT_PLANS[index];
+  $('#suggestionText').innerHTML = `
+    <strong>${plan.title}</strong><br>
+    Typ: ${plan.type}<br>
+    Empfohlene Zeit: ca. ${plan.duration} Min.
+  `;
+  // Speichere Index im DOM für den Button
+  $('#dailySuggestion').dataset.planIndex = index;
+}
+
+function applyDailySuggestion() {
+  const idx = parseInt($('#dailySuggestion').dataset.planIndex);
+  const plan = WORKOUT_PLANS[idx];
+  $('#wkDate', document).value = todayStr();
+  $('#wkType').value = plan.type;
+  $('#wkMinutes').value = plan.duration;
+  renderExerciseFields();
+  window.scrollTo({ top: document.getElementById('wkForm').offsetTop - 100, behavior: 'smooth' });
+}
+
+/* ================= KALENDER RENDERING ================= */
+function updateCalendar() {
+  const grid = $('#calendarGrid');
+  grid.innerHTML = '';
+
+  // Labels
+  ['Mo','Di','Mi','Do','Fr','Sa','So'].forEach(d => {
+    const lbl = document.createElement('div');
+    lbl.className = 'day-label';
+    lbl.textContent = d;
+    grid.appendChild(lbl);
+  });
+
+  const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const startOffset = firstDay === 0 ? 6 : firstDay - 1; // Mo=0
+
+  $('#calTitle').textContent = new Date(currentYear, currentMonth).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+
+  for (let i = 0; i < startOffset; i++) grid.appendChild(document.createElement('div'));
+
+  const today = new Date();
+  for (let d = 1; d <= daysInMonth; d++) {
+    const cellDate = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const hasWk = appData.workouts.some(w => w.date === cellDate);
+
+    const div = document.createElement('div');
+    div.className = 'day-cell' + (hasWk ? ' has-workout' : '');
+    if (currentYear === today.getFullYear() && currentMonth === today.getMonth() && d === today.getDate()) div.classList.add('today');
+
+    div.innerHTML = `${d}<small>${hasWk ? '✓' : ''}</small>`;
+    grid.appendChild(div);
+  }
+}
+
+function changeMonth(delta) {
+  currentMonth += delta;
+  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+  if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+  updateCalendar();
+}
+
+/* ================= GEWICHT & CHART ================= */
+$('wbForm').addEventListener('submit', e => {
+  e.preventDefault();
+  appData.weights.push({ id: Date.now(), date: $('wbDate').value, weight: parseFloat($('wbValue').value) });
+  saveData(); updateCalendar(); drawWeightChart(); renderStats();
+  $('wbForm').reset(); $('wbDate').value = todayStr();
+});
+
+function drawWeightChart() {
+  const canvas = document.getElementById('wChart');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+
+  // Clear & bg
+  ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--soft');
+  ctx.fillRect(0, 0, w, h);
+
+  if (appData.weights.length < 2) {
+    ctx.fillStyle = '#888';
+    ctx.font = '16px sans-serif';
+    ctx.fillText('Nicht genug Daten für Diagramm', w/2 - 80, h/2);
+    return;
+  }
+
+  const sorted = [...appData.weights].sort((a,b) => a.date.localeCompare(b.date));
+  const dates = sorted.map(w => new Date(w.date).getTime());
+  const weights = sorted.map(w => w.weight);
+  const minW = Math.min(...weights), maxW = Math.max(...weights);
+  const paddingY = 30;
+
+  // Scale helpers
+  const mapX = t => (t - dates[0]) / (dates[dates.length-1] - dates[0]) * (w - 40) + 20;
+  const mapY = wgt => h - ((wgt - minW) / (maxW - minW || 1)) * (h - paddingY*2) - paddingY;
+
+  // Grid lines
+  ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--border');
+  ctx.lineWidth = 1;
+  for(let i=0; i<=4; i++) {
+    const y = paddingY + ((h-40-paddingY)*i)/4;
+    ctx.beginPath(); ctx.moveTo(20, y); ctx.lineTo(w-20, y); ctx.stroke();
+  }
+
+  // Line
+  ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--accent');
+  ctx.lineWidth = 3;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  sorted.forEach((wgt, i) => {
+    const x = mapX(dates[i]);
+    const y = mapY(wgt);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Dots
+  ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--accent');
+  sorted.forEach((wgt, i) => {
+    ctx.beginPath();
+    ctx.arc(mapX(dates[i]), mapY(wgt), 5, 0, Math.PI*2);
+    ctx.fill();
+  });
+
+  // Labels
+  ctx.fillStyle = '#1f2937';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.fillText(`${maxW.toFixed(1)} kg`, w - 65, paddingY + 5);
+  ctx.fillText(`${minW.toFixed(1)} kg`, w - 65, h - paddingY - 10);
+}
+
+/* ================= WORKOUT LOGGING & PARSER ================= */
+$('wkForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const container = $('#exerciseContainer');
+  const inputs = container.querySelectorAll('.ex-input');
+
+  // Parse results with x-multiplication
+  let totalVolume = 0;
+  const parsedExercises = [];
+  inputs.forEach(inp => {
+    const res = JSON.parse(inp.dataset.result); // stored as { raw: '2x8', calc: 16 } on input
+    totalVolume += res.calc === null ? 1 : res.calc;
+    parsedExercises.push({ name: inp.dataset.name, result: res.raw, volume: res.calc });
+  });
+
+  appData.workouts.push({
+    id: Date.now(),
+    date: $('wkDate').value,
+    type: $('wkType').value,
+    duration: parseInt($('wkMinutes').value),
+    exercises: parsedExercises,
+    totalVolume
+  });
+
+  saveData(); updateCalendar(); renderStats(); drawWeightChart(); renderLogTable();
+  container.innerHTML = '<p class="small">Erfolgreich gespeichert! Liste reset zu 10 Min.</p>';
+  setTimeout(()=> renderExerciseFields(), 300);
+});
+
+function parseResultString(str) {
+  if (!str || !str.includes('x')) return { raw: str, calc: 1 };
+  const match = str.toLowerCase().trim().match(/^(\d+)\s*[x·*]\s*(\d+)$/);
+  if (match) {
+    return { raw: str, calc: parseInt(match[1]) * parseInt(match[2]) };
+  }
+  return { raw: str, calc: 1 };
+}
+
+function renderExerciseFields() {
+  const type = $('wkType').value;
+  let keys;
+  if (type === 'freestyle') keys = ['Kniebeugen','Liegestütz','Plank','Laufen'];
+  else {
+    const plan = WORKOUT_PLANS.find(p => p.type === type) || WORKOUT_PLANS[0];
+    keys = plan.exercises;
+  }
+
+  let html = '';
+  keys.forEach((name, i) => {
+    html += `
+      <div style="margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:8px;">
+        <label>${name}</label>
+        <input type="number" placeholder="Sätze (z.B. 3)" class="ex-inputs" data-id="sets-${i}" required style="width:70px"> x
+        <input type="number" placeholder="Wdh." class="ex-inputs" data-id="reps-${i}" required>
+        <div style="margin-top:4px;"><small>Ergebnis (optional):</small></div>
+        <input type="text" placeholder="z.B. 80kg oder 2x15 oder Tempo 3-1-X" data-id="result-${i}" class="ex-result-input">
+        <div id="preview-${i}" class="small" style="margin-top:4px; color:var(--accent)"></div>
+      </div>`;
+  });
+  $('#exerciseContainer').innerHTML = html;
+
+  // Live Parser Logic
+  document.querySelectorAll('.ex-result-input').forEach(inp => {
+    inp.addEventListener('input', e => {
+      const idx = parseInt(e.target.dataset.id.replace('result-',''));
+      const val = parseResultString(e.target.value);
+      $('#preview-'+idx).textContent = `Berechnet: ${val.calc} Einheiten`;
+      e.target.dataset.result = JSON.stringify(val); // Store for save
+    });
+  });
+}
+
+/* ================= RENDER STATS & LOG ================= */
+function renderStats() {
+  const totalWk = appData.workouts.length;
+  let streak = 0, xp = 0;
+
+  // Calculate XP & Streak
+  const dates = [...new Set(appData.workouts.map(w => w.date))].sort().reverse();
+  for (let i=0; i<365; i++) {
+    const d = new Date(); d.setDate(d.getDate()-i);
+    const ds = d.toISOString().split('T')[0];
+    if (dates.includes(ds)) { streak++; xp += Math.floor(Math.random()*10)+40; } // Simple XP logic
+    else if (i > 0) break;
+  }
+
+  $('#s_totalWk').textContent = totalWk;
+  $('#s_streak').textContent = streak;
+  $('#s_xp').textContent = xp;
+
+  renderLogTable();
+}
+
+function renderLogTable() {
+  const tbody = $('#logBody');
+  tbody.innerHTML = '';
+  [...appData.workouts].reverse().forEach(wk => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${wk.date}</td>
+      <td><span style="text-transform:capitalize">${wk.type.replace('_',' ')}</span></td>
+      <td>${wk.duration} Min</td>
+      <td><button class="danger" onclick="deleteWorkout(${wk.id})" style="margin:0;padding:4px 8px;font-size:12px">Löschen</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function deleteWorkout(id) {
+  appData.workouts = appData.workouts.filter(w => w.id !== id);
+  saveData(); renderStats(); updateCalendar(); drawWeightChart();
+}
+
+/* ================= THEME & INIT ================= */
+function setTheme(t) {
+  document.body.className = t;
+  appData.theme = t; saveData(); drawWeightChart(); // Redraw chart for color sync
+}
+
+function clearAll() {
+  if(confirm('Wirklich ALLE Daten löschen? Das geht nicht zurück.')) {
+    localStorage.removeItem(STORAGE_KEY);
+    location.reload();
+  }
+}
+
+// INIT
+updateDailySuggestion();
+updateCalendar(); renderStats(); drawWeightChart(); renderExerciseFields();
+$('wkDate').value = todayStr(); $('wbDate').value = todayStr();
+</script>
+</body>
+</html>
