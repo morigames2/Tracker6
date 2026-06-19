@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workout Tracker Master</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#8b5cf6">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--bg:#f4f4f4;--card:#fff;--text:#222;--muted:#666;--accent:#8b5cf6;--accent2:#a78bfa;--danger:#c0392b;--border:#ddd;--soft:#ede9fe;--ok:#22c55e}
+body.dark{--bg:#09080d;--card:#16121f;--text:#f7f2ff;--muted:#b9a8d9;--border:#312842;--soft:#2d194f;--ok:#4ade80}
+body.theme-purple{--accent:#8b5cf6;--accent2:#a78bfa;--soft:#ede9fe} body.dark.theme-purple{--soft:#2d194f}
+body.theme-blue{--accent:#3b82f6;--accent2:#93c5fd;--soft:#dbeafe} body.dark.theme-blue{--soft:#172554}
+body.theme-green{--accent:#22c55e;--accent2:#86efac;--soft:#dcfce7} body.dark.theme-green{--soft:#052e16}
+*{box-sizing:border-box}
+body{font-family:Arial,sans-serif;max-width:900px;margin:30px auto;padding:20px;background:var(--bg);color:var(--text)}
+h1,h2,h3{text-align:center}.card,form,table{background:var(--card);padding:20px;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.12);margin-bottom:25px}
+label{display:block;margin-top:12px;font-weight:bold}
+input,select,button,textarea{width:100%;padding:12px;margin-top:6px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text)}
+button{background:#17111f;color:#fff;border:none;cursor:pointer;font-weight:bold;margin-top:15px}
+button:hover{opacity:.86}.small{color:var(--muted);font-size:14px;margin-top:5px}.danger{background:var(--danger)!important}
+/* Grid layouts */
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;text-align:center;margin-bottom:20px;}
+.stat{padding:10px;border-radius:10px;background:var(--soft);color:var(--text)}.stat strong{display:block;font-size:24px;color:var(--accent)}
+.day-rotation-card{background:var(--accent);color:#fff;padding:15px;border-radius:8px;text-align:center;margin-bottom:15px}
+.grid{display:grid;gap:10px}.plan-grid,.theme-grid,.backup-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:15px}.weekday{text-align:center;color:var(--muted)}.day{padding:8px;text-align:center;font-size:13px;background:var(--bg);border-radius:6px;border:1px solid var(--border)}
+.day:hover{border-color:var(--accent)} .day.heatmap-4{background:var(--accent);color:#fff} .day.weekend{opacity:0.6}
+table{width:100%;border-collapse:collapse}.th,td{padding:8px;text-align:left;border-bottom:1px solid var(--border)}
+.theme-btn,.plan-option{padding:10px;border:1px solid var(--border);border-radius:8px;cursor:pointer;background:var(--bg);text-align:center;color:var(--text)}.theme-btn.active, .plan-option.selected {border-color:var(--accent);border-width:3px}
+input[type="number"], input[type="date"]{appearance:none;-webkit-appearance:none}
+canvas{width:100%;height:auto;border-radius:8px;background:var(--bg);margin-top:10px}
+@media(max-width:600px){.summary-grid{grid-template-columns:repeat(2,1fr)}.calendar-grid{font-size:12px}}
+</style>
+</head>
+<body>
+
+<h1 style="color:var(--accent)">🏋️ Workout Tracker</h1>
+
+<div class="card">
+  <div class="summary-grid">
+    <div class="stat">Total<span id="totalWorkouts">0</span></div>
+    <div class="stat">Streak<span id="streakDisplay">0</span><small>Tage</small></div>
+    <div class="stat">XP<span id="xpDisplay">0</span></div>
+    <div class="stat">Level<span id="levelDisplay">1</span></div>
+  </div>
+
+  <!-- DAILY SUGGESTION (Replaces the manual "How are you" buttons) -->
+  <div id="dailySuggestionCard" class="day-rotation-card">
+    <h3 style="margin:0">Empfehlung für heute</h3>
+    <p id="dailyRecommendationText" style="font-size:1.2em; margin:5px 0">Laden...</p>
+  </div>
+
+</div>
+
+<div class="card">
+  <h2>Kalender & Statistik</h2>
+  <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+    <button onclick="changeMonth(-1)" style="width:auto;margin:0">← Zurück</button>
+    <h3 id="calendarTitle" style="margin:0">Mittwoch, Juni 2026</h3>
+    <button onclick="changeMonth(1)" style="width:auto;margin:0">Vor →</button>
+  </div>
+  <div class="calendar-grid" id="calendarGrid"></div>
+
+  <p class="small">Aktivität nach Häufigkeit gefärbt.</p>
+</div>
+
+<div class="card">
+  <h2>Gewicht tracken</h2>
+  <form id="weightForm">
+    <label>Datum</label><input type="date" id="weightDate" value="2026-06-19">
+    <label>Gewicht (kg)</label><input type="number" id="weightValue" step="0.1" min="40" max="300" required>
+    <button type="submit">Speichern</button>
+  </form>
+  <p class="small">Heutige Einträge:</p>
+  <div id="todayWeightLog"></div>
+</div>
+
+<div class="card">
+  <h2>Gewichts-Diagramm</h2>
+  <canvas id="weightChart" width="900" height="300"></canvas>
+</div>
+
+<div class="card">
+  <h2>Workout planen</h2>
+
+  <!-- Automatic Plan Suggestions -->
+  <label>Basierend auf dem Wochentag vorgeschlagen:</label>
+  <div class="plan-grid" id="suggestedPlanContainer"></div>
+
+  <hr style="border:0;border-top:1px solid var(--border);margin:20px 0">
+
+  <h3>Freies Workout eintragen</h3>
+  <form id="manualForm">
+    <label>Typ</label>
+    <select id="planSelect">
+      <option value="">-- Bitte wählen --</option>
+      <option value="fullbody_squat">Full Body (Hauptfokus: Hocke)</option>
+      <option value="upper_push">Oberkörper (Schieben)</option>
+      <option value="core_olympian">Core Olympisch</option>
+      <option value="cardio_hiit">HIIT Cardio</option>
+      <option value="mobility_flow">Yoga Flow / Mobility</option>
+    </select>
+    <label>Dauer (Min)</label><input type="number" id="manualDuration" value="45">
+
+    <!-- Exercise List Area -->
+    <div id="exerciseList"><p class="small">Wähle einen Plan von oben, um die Übungen zu sehen.</p></div>
+
+    <button type="submit" style="background:var(--accent)">Workout beenden & Speichern</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Themen & Farben</h2>
+  <div class="theme-grid">
+    <div class="theme-btn active" onclick="setTheme('purple')" style="background:#ede9fe;color:#000">Lila</div>
+    <div class="theme-btn" onclick="setTheme('blue')" style="background:#dbeafe">Blau</div>
+    <div class="theme-btn" onclick="setTheme('green')" style="background:#dcfce7">Grün</div>
+    <div class="theme-btn" onclick="setTheme('gold')" style="background:#fef3c7;color:#000">Gold</div>
+  </div>
+  <button class="danger" onclick="clearAllData()" style="margin-top:40px">Fortschritt löschen</button>
+</div>
+
+<!-- JAVASCRIPT SECTION -->
+<script>
+const $ = id => document.getElementById(id);
+// --- STATE MANAGEMENT ---
+let state = JSON.parse(localStorage.getItem("wts_state_v2")) || {
+  workouts: [],
+  weights: [],
+  dailySuggestionIndex: [3, 5, 0, 1, 2, -1, -1], // Mon(3), Wed(5) etc... see below
+  theme: "purple"
+};
+
+const exercisesDatabase = {
+  fullbody_squat: { name:"Full Body Fokus", duration:45, items:['Kniebeugen (Bodyweight)', 'Plank', 'Ausfallschritte'] },
+  upper_push:   { name:"Oberkörper Plus", duration:30, items:['Liegestütze schwer', 'Dips an Stuhl', 'Wand-Pushups'] },
+  core_olympian:{ name:"Core Olympisch", duration:25, items:['Rudern vorgebeugt', 'Superman', 'Bird Dog'] }, // Renamed for clarity
+  cardio_hiit:  { name:"HIIT Cardio",     duration:30, items:['Hampelmänner', 'Mountain Climbers', 'Knie hochlaufen'] },
+  mobility_flow:{ name:"Yoga Flow",      duration:45, items:['Herabschauender Hund', 'Kindhaltung', 'Satz von Cobra'] } // Corrected
+};
+
+const dailyRecommendations = {
+    fullbody_squat: "Montags & Donnerstags (Kraft)",
+    upper_push:     "Dienstags (Oberkörper)",
+    cardio_hiit:    "Mittwochs & Freitags (Herz/Kreislauf)",
+    core_olympian:  "Freitags (Core Fokus)",
+    mobility_flow:  "Wochenenden (Erholung)"
+
+const workoutsList = $("workoutList"); // ID needed in HTML for list. Added to HTML below.
+html
+<!DOCTYPE html>
+
+<html lang="de">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Workout Tracker Master</title>
+
+<link rel="manifest" href="manifest.json">
+
+<meta name="theme-color" content="#8b5cf6">
+
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<style>
+
+:root{--bg:#f4f4f4;--card:#fff;--text:#222;--muted:#666;--accent:#8b5cf6;--accent2:#a78bfa;--danger:#c0392b;--border:#ddd;--soft:#ede9fe;--ok:#22c55e}
+
+body.dark{--bg:#09080d;--card:#16121f;--text:#f7f2ff;--muted:#b9a8d9;--border:#312842;--soft:#2d194f;--ok:#4ade80}
+
+body.theme-purple{--accent:#8b5cf6;--accent2:#a78bfa;--soft:#ede9fe} body.dark.theme-purple{--soft:#2d194f}
+
+body.theme-blue{--accent:#3b82f6;--accent2:#93c5fd;--soft:#dbeafe} body.dark.theme-blue{--soft:#172554}
+
+body.theme-green{--accent:#22c55e;--accent2:#86efac;--soft:#dcfce7} body.dark.theme-green{--soft:#052e16}
+
+{box-sizing:border-box}
+
+body{font-family:Arial,sans-serif;max-width:900px;margin:30px auto;padding:20px;background:var(--bg);color:var(--text)}
+
+h1,h2,h3{text-align:center}.card,form,table{background:var(--card);padding:20px;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.12);margin-bottom:25px}
+
+label{display:block;margin-top:12px;font-weight:bold}
+
+input,select,button,textarea{width:100%;padding:12px;margin-top:6px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text)}
+
+button{background:#17111f;color:#fff;border:none;cursor:pointer;font-weight:bold;margin-top:15px}
+
+button:hover{opacity:.86}.small{color:var(--muted);font-size:14px;margin-top:5px}.danger{background:var(--danger)!important}
+
+/ Grid layouts /
+
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;text-align:center;margin-bottom:20px;}
+
+.stat{padding:10px;border-radius:10px;background:var(--soft);color:var(--text)}.stat strong{display:block;font-size:24px;color:var(--accent)}
+
+.day-rotation-card{background:var(--accent);color:#fff;padding:15px;border-radius:8px;text-align:center;margin-bottom:15px}
+
+.grid{display:grid;gap:10px}.plan-grid,.theme-grid,.backup-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+
+.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:15px}.weekday{text-align:center;color:var(--muted)}.day{padding:8px;text-align:center;font-size:13px;background:var(--bg);border-radius:6px;border:1px solid var(--border)}
+
+.day:hover{border-color:var(--accent)} .day.heatmap-4{background:var(--accent);color:#fff} .day.weekend{opacity:0.6}
+
+table{width:100%;border-collapse:collapse}.th,td{padding:8px;text-align:left;border-bottom:1px solid var(--border)}
+
+.theme-btn,.plan-option{padding:10px;border:1px solid var(--border);border-radius:8px;cursor:pointer;background:var(--bg);text-align:center;color:var(--text)}.theme-btn.active, .plan-option.selected {border-color:var(--accent);border-width:3px}
+
+input[type="number"], input[type="date"]{appearance:none;-webkit-appearance:none}
+
+canvas{width:100%;height:auto;border-radius:8px;background:var(--bg);margin-top:10px}
+
+@media(max-width:600px){.summary-grid{grid-template-columns:repeat(2,1fr)}.calendar-grid{font-size:12px}}
+
+</style>
+
+</head>
+
+<body>
+
+<h1 style="color:var(--accent)"> Workout Tracker</h1>
+
+<div class="card">
+
+<div class="summary-grid">
+
+<div class="stat">Total<span id="totalWorkouts">0</span></div>
+
+<div class="stat">Streak<span id="streakDisplay">0</span><small>Tage</small></div>
+
+<div class="stat">XP<span id="xpDisplay">0</span></div>
+
+<div class="stat">Level<span id="levelDisplay">1</span></div>
+
+</div>
+
+<!-- DAILY SUGGESTION (Replaces the manual "How are you" buttons) -->
+
+<div id="dailySuggestionCard" class="day-rotation-card">
+
+<h3 style="margin:0">Empfehlung für heute</h3>
+
+<p id="dailyRecommendationText" style="font-size:1.2em; margin:5px 0">Laden...</p>
+
+</div>
+
+</div>
+
+<div class="card">
+
+<h2>Kalender & Statistik</h2>
+
+<div style="display:flex;justify-content:space-between;margin-bottom:10px">
+
+<button onclick="changeMonth(-1)" style="width:auto;margin:0">← Zurück</button>
+
+<h3 id="calendarTitle" style="margin:0">Mittwoch, Juni 2026</h3>
+
+<button onclick="changeMonth(1)" style="width:auto;margin:0">Vor →</button>
+
+</div>
+
+<div class="calendar-grid" id="calendarGrid"></div>
+
+<p class="small">Aktivität nach Häufigkeit gefärbt.</p>
+
+</div>
+
+<div class="card">
+
+<h2>Gewicht tracken</h2>
+
+<form id="weightForm">
+
+<label>Datum</label><input type="date" id="weightDate" value="2026-06-19">
+
+<label>Gewicht (kg)</label><input type="number" id="weightValue" step="0.1" min="40" max="300" required>
+
+<button type="submit">Speichern</button>
+
+</form>
+
+<p class="small">Heutige Einträge:</p>
+
+<div id="todayWeightLog"></div>
+
+</div>
+
+<div class="card">
+
+<h2>Gewichts-Diagramm</h2>
+
+<canvas id="weightChart" width="900" height="300"></canvas>
+
+</div>
+
+<div class="card">
+
+<h2>Workout planen</h2>
+
+<!-- Automatic Plan Suggestions -->
+
+<label>Basierend auf dem Wochentag vorgeschlagen:</label>
+
+<div class="plan-grid" id="suggestedPlanContainer"></div>
+
+<hr style="border:0;border-top:1px solid var(--border);margin:20px 0">
+
+<h3>Freies Workout eintragen</h3>
+
+<form id="manualForm">
+
+<label>Typ</label>
+
+<select id="planSelect">
+
+<option value="">-- Bitte wählen --</option>
+
+<option value="fullbody_squat">Full Body (Hauptfokus: Hocke)</option>
+
+<option value="upper_push">Oberkörper (Schieben)</option>
+
+<option value="core_olympian">Core Olympisch</option>
+
+<option value="cardio_hiit">HIIT Cardio</option>
+
+<option value="mobility_flow">Yoga Flow / Mobility</option>
+
+</select>
+
+<label>Dauer (Min)</label><input type="number" id="manualDuration" value="45">
+
+<!-- Exercise List Area -->
+
+<div id="exerciseList"><p class="small">Wähle einen Plan von oben, um die Übungen zu sehen.</p></div>
+
+<button type="submit" style="background:var(--accent)">Workout beenden & Speichern</button>
+
+</form>
+
+</div>
+
+<div class="card">
+
+<h2>Themen & Farben</h2>
+
+<div class="theme-grid">
+
+<div class="theme-btn active" onclick="setTheme('purple')" style="background:#ede9fe;color:#000">Lila</div>
+
+<div class="theme-btn" onclick="setTheme('blue')" style="background:#dbeafe">Blau</div>
+
+<div class="theme-btn" onclick="setTheme('green')" style="background:#dcfce7">Grün</div>
+
+<div class="theme-btn" onclick="setTheme('gold')" style="background:#fef3c7;color:#000">Gold</div>
+
+</div>
+
+<button class="danger" onclick="clearAllData()" style="margin-top:40px">Fortschritt löschen</button>
+
+</div>
+
+<!-- JAVASCRIPT SECTION -->
+
+<script>
+
+const $ = id => document.getElementById(id);
+
+// --- STATE MANAGEMENT ---
+
+let state = JSON.parse(localStorage.getItem("wts_state_v2")) || {
+
+workouts: [],
+
+weights: [],
+
+dailySuggestionIndex: [3, 5, 0, 1, 2, -1, -1], // Mon(3), Wed(5) etc... see below
+
+theme: "purple"
+
+};
+
+const exercisesDatabase = {
+
+fullbody_squat: { name:"Full Body Fokus", duration:45, items:['Kniebeugen (Bodyweight)', 'Plank', 'Ausfallschritte'] },
+
+upper_push: { name:"Oberkörper Plus", duration:30, items:['Liegestütze schwer', 'Dips an Stuhl', 'Wand-Pushups'] },
+
+core_olympian:{ name:"Core Olympisch", duration:25, items:['Rudern vorgebeugt', 'Superman', 'Bird Dog'] }, // Renamed for clarity
+
+cardio_hiit: { name:"HIIT Cardio", duration:30, items:['Hampelmänner', 'Mountain Climbers', 'Knie hochlaufen'] },
+
+mobility_flow:{ name:"Yoga Flow", duration:45, items:['Herabschauender Hund', 'Kindhaltung', 'Satz von Cobra'] } // Corrected
+
+};
+
+const dailyRecommendations = {
+
+fullbody_squat: "Montags & Donnerstags (Kraft)",
+
+upper_push: "Dienstags (Oberkörper)",
+
+cardio_hiit: "Mittwochs & Freitags (Herz/Kreislauf)",
+
+core_olympian: "Freitags (Core Fokus)",
+
+mobility_flow: "Wochenenden (Erholung)"
+
+const workoutsList = $("workoutList"); // ID needed in HTML for list. Added to HTML below.
+
+``html
+
+<!DOCTYPE html>
+
+<html lang="de">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Workout Tracker Master</title>
+
+<link rel="manifest" href="manifest.json">
+
+<meta name="theme-color" content="#8b5cf6">
+
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<style>
+
+:root{--bg:#f4f4f4;--card:#fff;--text:#222;--muted:#666;--accent:#8b5cf6;--accent2:#a78bfa;--danger:#c0392b;--border:#ddd;--soft:#ede9fe;--ok:#22c55e}
+
+body.dark{--bg:#09080d;--card:#16121f;--text:#f7f2ff;--muted:#b9a8d9;--border:#312842;--soft:#2d194f;--ok:#4ade80}
+
+body.theme-purple{--accent:#8b5cf6;--accent2:#a78bfa;--soft:#ede9fe} body.dark.theme-purple{--soft:#2d194f}
+
+body.theme-blue{--accent:#3b82f6;--accent2:#93c5fd;--soft:#dbeafe} body.dark.theme-blue{--soft:#172554}
+
+body.theme-green{--accent:#22c55e;--accent2:#86efac;--soft:#dcfce7} body.dark.theme-green{--soft:#052e16}
+
+{box-sizing:border-box}
+
+body{font-family:Arial,sans-serif;max-width:900px;margin:auto;padding:20px;background:var(--bg);color:var(--text)}
+
+h1,h2,h3{text-align:center}.card,form,table{background:var(--card);padding:20px;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.12);margin-bottom:25px}
+
+label{display:block;margin-top:12px;font-weight:bold}
+
+input,select,button,textarea{width:100%;padding:12px;margin-top:6px;border-radius:8px;border:1px solid var(--border);background:var(--card)}
+
+button{background:#17111f;color:#fff;border:none;cursor:pointer;font-weight:bold}
+
+button:hover{opacity:.9}.small{color:var(--muted);font-size:13px;margin-top:4px}.danger{background:var(--danger)!important}
+
+.grid{display:grid;gap:8px}
+
+.summary-grid,.plan-grid,.theme-grid{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}.day-card{display:inline-block;width:12.5%;text-align:center;padding:4px;margin:0;border-radius:4px;font-size:13px;color:var(--bg);box-sizing:border-box}
+
+.day-header{text-align:center;font-weight:bold;color:var(--muted)}.day-btn{cursor:pointer;padding:6px 0;border-radius:4px;background:var(--soft)} .day-btn:hover {border:1px solid var(--accent)} .today-highlight { border-width:2px; border-color:var(--accent); }
+
+.table-scroll {overflow-x:auto} table{width:100%;border-collapse:collapse;font-size:14px} th,td{padding:8px;text-align:left;border-bottom:1px solid var(--border)} .theme-btn{cursor:pointer;padding:12px;border-radius:8px;text-align:center;transition:.2s}
+
+</style>
+
+</head>
+
+<body>
+
+<h1 style="color:var(--accent)">🏋️ Dein Workout Tracker</h1>
+
+<div class="card">
+
+<h2>Übersicht</h2>
+
+<div class="grid summary-grid">
+
+<div class="stat"><strong id="s_workouts">0</strong>Workouts</div>
+
+<div class="stat"><strong id="s_minutes">0</strong>Minuten</div>
+
+<div class="stat"><strong id="s_xp">0</strong>XP</div>
+
+<div class="stat"><strong id="s_level">1</strong>Level</div>
+
+</div>
+
+<hr style="border:0;border-top:1px solid var(--border);margin:20px 0">
+
+<!-- NEU: Automatisches Tages-Feature statt manueller "Gefühl"-Auswahl -->
+
+<h3 id="dailyTitle">Heute ist...</h3>
+
+<div id="dailySuggestion" class="small" style="background:var(--soft); padding:10px; border-radius:8px; text-align:center;">
+
+Lade Vorschlag...
+
+</div>
+
+<hr style="border:0;border-top:1px solid var(--border);margin:20px 0">
+
+<h3>Kalender</h3>
+
+<div class="grid">
+
+<div class="day-header"><small>Mo</small></div><div class="day-header"><small>Di</small></div><div class="day-header"><small>Mi</small></div><div class="day-header"><small>Do</small></div><div class="day-header"><small>Fr</small></div><div class="day-header"><small>Sa</small></div><div class="day-header"><small>So</small></div>
+
+</div>
+
+<div id="calendarGrid" class="grid"></div>
+
+<hr style="border:0;border-top:1px solid var(--border);margin:20px 0">
+
+<h3>Gewicht tracken (kg)</h3>
+
+<form id="weightForm">
+
+<label>Datum</label><input type="date" id="wDate" required>
+
+<label>Gewicht</label><input type="number" step="0.1" id="wValue" required>
+
+<button type="submit">Speichern</button>
+
+</form>
+
+<hr style="border:0;border-top:1px solid var(--border);margin:20px 0">
+
+<h3>Gewichtsentwicklung</h3>
+
+<canvas id="wChart" width="600" height="250"></canvas>
+
+<hr style="border:0;border-top:1px solid var(--border);margin:20px 0">
+
+<h3>Workout Loggen</h3>
+
+<form id="workoutForm">
+
+<label>Typ</label>
+
+<select id="wkType" required>
+
+<option value="strength">Krafttraining</option>
+
+<option value="cardio">Cardio & HIIT</option>
+
+<option value="yoga">Yoga / Stretching</option>
+
+<option value="running">Laufen / Ausdauer</option>
+
+</select>
+
+<label>Dauer (Minuten)</label><input type="number" id="wkMinutes" required style="width:100px">
+
+<!-- ÜBUNGSLISTE MIT FORTSCHRITT -->
+
+<div id="exerciseContainer"></div>
+
+<button>Workout speichern</button>
+
+</form>
+
+<table class="table-scroll"><thead><tr><th>Datum</th><th>Typ</th><th>Min</th></tr></thead><tbody id="wkTable"></tbody></table>
+
+<hr style="border:0;border-top:1px solid var(--border);margin:20px 0">
+
+<h3>Farbe wechseln</h3>
+
+<div class="grid theme-btn" style="grid-template-columns:repeat(4,1fr)">
+
+<div onclick="setTheme('purple')" class="theme-btn" style="background:#ede9fe;color:#5b21b6">Lila</div>
+
+<div onclick="setTheme('blue')" class="theme-btn" style="background:#dbeafe;color:#1e40af">Blau</div>
+
+<div onclick="setTheme('green')" class="theme-btn" style="background:#dcfce7;color:#166534">Grün</div>
+
+<div onclick="setTheme('red')" class="theme-btn" style="background:#fee2e2;color:#b91c1c">Rot</div>
+
+</div>
+
+<button class="danger" onclick="clearData()" style="margin-top:40px">Alle Daten löschen</button>
+
+</div>
+
+<script>
+
+// --- KONFIGURATION & DATENBANK ---
+
+const exercisesDB = [
+
+{id:'squat', name:'Kniebeugen'}, {id:'pushup', name:'Liegestütz'},
+
+{id:'plank', name:'Plank'}, {id:'lunge', name:'Ausfallschritt'} // Hier weiter ausbauen!
+
+];
+
+const db_workouts = [
+
+{ id: 'upper_push', title: 'Oberkörper + Schieben', type: 'strength' },
+
+{ id: 'lower_legs', title: 'Beine & Hüfte', type: 'strength' },
+
+{ id: 'core_hiit', title: 'Core + HIIT', type: 'cardio' }
+
+];
+
+// --- HILFSFUNKTIONEN ---
+
+const $ = s => document.querySelector(s);
+
+const saveData = () => localStorage.setItem('wt_data', JSON.stringify({workouts, weights}));
+
+let workouts = JSON.parse(localStorage.getItem('wt_data'))?.workouts		[];
+let weights = JSON.parse(localStorage.getItem('wt_data'))?.weights		[];
+// --- KALENDER LOGIK ---
+
+function updateCalendar() {
+
+const grid = $('#calendarGrid');
+
+grid.innerHTML = '';
+
+const today = new Date();
+
+for (let d=1; d<=31; d++) {
+
+if (!new Date(2026, 5, d).getMonth()) continue; // Nur Juni zeigen
+
+let hasWorkout = workouts.some(w => w.date === 2026-06-${d.toString().padStart(2,'0')});
+
+let isToday = (d == today.getDate());
+
+const div = document.createElement('div');
+
+div.className = 'day-btn';
+
+if(isToday) div.classList.add('today-highlight');
+
+if(hasWorkout) {
+
+div.style.background = 'var(--accent)';
+
+div.style.color = '#fff';
+
+} else {
+
+div.style.background = 'var(--bg)';
+
+}
+
+div.innerText = d;
+
+grid.appendChild(div);
+
+}
+
+}
+
+// --- TÄGLICHER VORSCHLAG (DEINE WUNSCHFUNKTION) ---
+
+function updateDailyFeature() {
+
+const now = new Date();
+
+// Tag ab 0 (So) bis 6 (Sa). Wir korrigieren das auf Mo=0 für unsere Logik
+
+let dayIdx = now.getDay()-1; if(dayIdx<0) dayIdx = 6;
+
+// NEU: Unterschiedliche Pläne basierend auf dem Tag!
+
+const suggestions = [
+
+db_workouts[1], // Mo: Legs
+
+db_workouts[0], // Di: Upper Push
+
+db_workouts[2], // Mi: HIIT
+
+db_workouts[1], // Do: Legs
+
+db_workouts[0] // Fr: Push
+
+];
+
+const todayRec = suggestions[dayIdx];
+
+('#dailyTitle').innerText = `Tag{day+1} im Plan;
+
+$('#dailySuggestion').innerHTML =
+
+<strong>Vorgeschlagener Typ:</strong> ${todayRec.title}<br><br>
+
+<button onclick="selectWorkout('
+t
+o
+d
+a
+y
+R
+e
+c
+.
+i
+d
+′
+,
+′
+todayRec.id 
+′
+ , 
+′
+ {todayRec.type}')"
+
+style="background:var(--accent);color:#fff;border:none;padding:10px;border-radius:8px;margin-top:5px;width:auto">
+
+Diesen Plan wählen
+
+</button>;
+
+}
+
+function selectWorkout(id, type) {
+
+$('#wkType').value = type;
+
+// Scroll down to form
+
+document.querySelector('form#workoutForm').scrollIntoView({behavior:'smooth'});
+
+}
+
+// --- WEIGHT CHART (EINFACH) ---
+
+function drawChart(){
+
+const ctx = $('#wChart').getContext('2d');
+
+if(weights.length < 2) return;
+
+
+// Sort by date
+
+weights.sort((a,b) => a.date - b.date);
+
+
+let points = '';
+
+let minX = weights[0].date;
+
+let maxX = weights[weights.length-1].date;
+
+let rangeY = 20; // Max Spanne kg
+
+
+weights.forEach((w,i)=>{
+
+let x = ((w.date - minX) / (maxX-minX)) 580 + 10;
+
+let y = 250 - ((w.weight - weights[0].weight)/rangeY230);
+
+points += <circle cx="
+x
+"
+c
+y
+=
+"
+x"cy="{y}" r="4" fill="var(--accent)" /><rect x="
+x
+−
+60
+"
+y
+=
+"
+x−60"y="{y+4}" width="80" height="15" rx="4"/><text x="
+x
+−
+20
+"
+y
+=
+"
+x−20"y="{y+53}">${w.weight.toFixed(1)}kg</text>;
+
+});
+
+
+$('#wChart').innerHTML = points; // Canvas als SVG overlay nutzen zur Vereinfachung hier.
+
+}
+
+// --- FORM HANDLINGS ---
+
+$('#wkType').addEventListener('change', updateExercises);
+
+updateCalendar();
+
+updateDailyFeature();
+
+function updateExercises() {
+
+$('#exerciseContainer').innerHTML = ''; // Hier muss die Logik fuer dynamische UX (Ergebnis x) eingefügt werden.
+
+}
+
+</script>
